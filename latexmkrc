@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
-$latex            = 'uplatex -synctex=1 --shell-escape';
-$latex_silent     = 'uplatex -synctex=1 -interaction=batchmode --shell-escape';
+$latex            = 'uplatex -synctex=1 -halt-on-error --shell-escape';
+$latex_silent     = 'uplatex -synctex=1 -halt-on-error -interaction=batchmode --shell-escape';
 $bibtex           = 'upbibtex';
 $biber            = 'biber --bblencoding=utf8 -u -U --output_safechars';
 $dvipdf           = 'dvipdfmx %O -o %D %S';
