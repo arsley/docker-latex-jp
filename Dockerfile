@@ -1,60 +1,35 @@
-FROM frolvlad/alpine-glibc
-MAINTAINER ganow <y.nagano.92@gmail.com>
+FROM frolvlad/alpine-glibc:latest
 
-ENV PATH /usr/local/texlive/2017/bin/x86_64-linux:$PATH
+ENV PATH /usr/local/texlive/2021/bin/x86_64-linuxmusl:$PATH
 
-# Install latex dependencies
-RUN apk --no-cache add perl wget xz tar fontconfig-dev && \
+RUN apk add --no-cache curl perl fontconfig-dev freetype-dev inkscape && \
+    apk add --no-cache --virtual .fetch-deps xz tar wget && \
     mkdir /tmp/install-tl-unx && \
-    wget -qO- ftp://tug.org/texlive/historic/2017/install-tl-unx.tar.gz | \
-    tar -xz -C /tmp/install-tl-unx --strip-components=1 && \
+    curl -L ftp://tug.org/historic/systems/texlive/2021/install-tl-unx.tar.gz | \
+      tar -xz -C /tmp/install-tl-unx --strip-components=1 && \
     printf "%s\n" \
       "selected_scheme scheme-basic" \
-      "option_doc 0" \
-      "option_src 0" \
+      "tlpdbopt_install_docfiles 0" \
+      "tlpdbopt_install_srcfiles 0" \
       > /tmp/install-tl-unx/texlive.profile && \
     /tmp/install-tl-unx/install-tl \
       --profile=/tmp/install-tl-unx/texlive.profile && \
     tlmgr install \
-      collection-basic collection-latex \
-      collection-latexrecommended collection-latexextra \
-      collection-fontsrecommended collection-fontsextra collection-langjapanese \
-      latexmk biblatex logreq biber \
-      bbm bbm-macros amsmath newtx physics && \
-    ( tlmgr install xetex || exit 0 ) && \
+      collection-latexextra \
+      collection-fontsrecommended \
+      collection-langjapanese \
+      latexmk && \
     rm -fr /tmp/install-tl-unx && \
-    apk --no-cache del xz tar fontconfig-dev
+    apk del .fetch-deps
 
-RUN apk --no-cache add make bash
+# RUN apk add --no-cache font-noto-cjk
 
-# Font settings
 ENV TEXMFLOCAL /usr/local/texlive/texmf-local
 COPY fonts/* $TEXMFLOCAL/fonts/truetype/public/
 COPY maps/* $TEXMFLOCAL/fonts/map/dvipdfmx/genshin/
 RUN mktexlsr && \
   kanji-config-updmap-sys genshin
 
-# Change timezone to JST
-ENV TIMEZONE Asia/Tokyo
-RUN apk --update add tzdata && \
-    cp /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
-    apk del tzdata && \
-    rm -rf /var/cache/apk/*
+WORKDIR /workdir
 
-# COPY latexmkrc /root/.latexmkrc
-
-# User setting
-ARG RUNTIME_USER="alpine"
-ENV RUNTIME_UID 1000
-
-RUN adduser -D -s /bin/bash -u $RUNTIME_UID $RUNTIME_USER && \
-  mkdir -p /home/$RUNTIME_USER/src && \
-  chown -R $RUNTIME_USER /home/$RUNTIME_USER/src && \
-  chown -R $RUNTIME_USER /usr/local/texlive/texmf-local/fonts/truetype/
-
-USER $RUNTIME_USER
-WORKDIR /home/$RUNTIME_USER/src
-
-COPY latexmkrc /home/$RUNTIME_USER/.latexmkrc
-
-CMD ["bash"]
+CMD ["sh"]
